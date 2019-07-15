@@ -171,71 +171,58 @@ impl SysBus {
             dummy: DummyBus([0; 4]),
         }
     }
+}
 
-    fn map(&self, addr: Addr) -> &Bus {
-        match addr as usize {
-            0x0000_0000...0x0000_3fff => &self.bios,
-            0x0200_0000...0x0203_ffff => &self.onboard_work_ram,
-            0x0300_0000...0x0300_7fff => &self.internal_work_ram,
-            0x0400_0000...0x0400_03fe => &self.ioregs,
-            0x0500_0000...0x0500_03ff => &self.palette_ram,
-            0x0600_0000...0x0601_7fff => &self.vram,
-            0x0700_0000...0x0700_03ff => &self.oam,
-            0x0800_0000...0x09ff_ffff => &self.gamepak,
-            _ => &self.dummy,
+macro_rules! call_bus_method {
+    ($sysbus:expr, $addr:expr, $func:ident, $($args:expr),*) => {
+        match $addr as usize {
+            0x0000_0000...0x0000_3fff => $sysbus.bios.$func($($args,)*),
+            0x0200_0000...0x0203_ffff => $sysbus.onboard_work_ram.$func($($args,)*),
+            0x0300_0000...0x0300_7fff => $sysbus.internal_work_ram.$func($($args,)*),
+            0x0400_0000...0x0400_03fe => $sysbus.ioregs.$func($($args,)*),
+            0x0500_0000...0x0500_03ff => $sysbus.palette_ram.$func($($args,)*),
+            0x0600_0000...0x0601_7fff => $sysbus.vram.$func($($args,)*),
+            0x0700_0000...0x0700_03ff => $sysbus.oam.$func($($args,)*),
+            0x0800_0000...0x09ff_ffff => $sysbus.gamepak.$func($($args,)*),
+            _ => $sysbus.dummy.$func($($args,)*),
         }
-    }
-
-    /// TODO proc-macro for generating this function
-    fn map_mut(&mut self, addr: Addr) -> &mut Bus {
-        match addr as usize {
-            0x0000_0000...0x0000_3fff => &mut self.bios,
-            0x0200_0000...0x0203_ffff => &mut self.onboard_work_ram,
-            0x0300_0000...0x0300_7fff => &mut self.internal_work_ram,
-            0x0400_0000...0x0400_03fe => &mut self.ioregs,
-            0x0500_0000...0x0500_03ff => &mut self.palette_ram,
-            0x0600_0000...0x0601_7fff => &mut self.vram,
-            0x0700_0000...0x0700_03ff => &mut self.oam,
-            0x0800_0000...0x09ff_ffff => &mut self.gamepak,
-            _ => &mut self.dummy,
-        }
-    }
+    };
 }
 
 impl Bus for SysBus {
     fn read_32(&self, addr: Addr) -> u32 {
-        self.map(addr).read_32(addr & 0xff_ffff)
+        call_bus_method!(self, addr, read_32, addr & 0xff_ffff)
     }
 
     fn read_16(&self, addr: Addr) -> u16 {
-        self.map(addr).read_16(addr & 0xff_ffff)
+        call_bus_method!(self, addr, read_16, addr & 0xff_ffff)
     }
 
     fn read_8(&self, addr: Addr) -> u8 {
-        self.map(addr).read_8(addr & 0xff_ffff)
+        call_bus_method!(self, addr, read_8, addr & 0xff_ffff)
     }
 
     fn write_32(&mut self, addr: Addr, value: u32) {
-        self.map_mut(addr).write_32(addr & 0xff_ffff, value)
+        call_bus_method!(self, addr, write_32, addr & 0xff_ffff, value)
     }
 
     fn write_16(&mut self, addr: Addr, value: u16) {
-        self.map_mut(addr).write_16(addr & 0xff_ffff, value)
+        call_bus_method!(self, addr, write_16, addr & 0xff_ffff, value)
     }
 
     fn write_8(&mut self, addr: Addr, value: u8) {
-        self.map_mut(addr).write_8(addr & 0xff_ffff, value)
+        call_bus_method!(self, addr, write_8, addr & 0xff_ffff, value)
     }
 
     fn get_bytes(&self, addr: Addr) -> &[u8] {
-        self.map(addr).get_bytes(addr & 0xff_ffff)
+        call_bus_method!(self, addr, get_bytes, addr & 0xff_ffff)
     }
 
     fn get_bytes_mut(&mut self, addr: Addr) -> &mut [u8] {
-        self.map_mut(addr).get_bytes_mut(addr & 0xff_ffff)
+        call_bus_method!(self, addr, get_bytes_mut, addr & 0xff_ffff)
     }
 
     fn get_cycles(&self, addr: Addr, access: MemoryAccess) -> usize {
-        self.map(addr).get_cycles(addr & 0xff_ffff, access)
+        call_bus_method!(self, addr, get_cycles, addr & 0xff_ffff, access)
     }
 }
